@@ -1,0 +1,16 @@
+import "hashes/sha256/sha256Padded";
+
+def main(u8[100] mut fleet) -> u8 {
+
+    u8 mut flag = 0;
+
+    for u32 i in 0..100{
+        flag = fleet[i] == 1 || flag == 1 ? 1 : 0;
+    }
+
+    assert(flag == 1);
+
+    return flag;
+ 
+    
+}
