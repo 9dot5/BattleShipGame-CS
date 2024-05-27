@@ -1,0 +1,124 @@
+import "hashes/sha256/sha256Padded";
+
+def main(private u8 nonce, private u32[3] carrier, private u32[3] battleship, private u32[3] destroyer, private u32[3] cruiser1, private u32[3] cruiser2, private u32[3] sub1, private u32[3] sub2 ) -> u32[8] {
+    field mut flag = 1;
+    u32 mut debug = 0;
+    u8[101] mut array = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+    u8[10][10] mut board = [[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0]];
+
+    flag = carrier[2] == 1 && carrier[0] < 4 ? 0 : 1;
+
+    flag = carrier[2] == 3 && carrier[0] > 5 || flag == 0 ? 0 : 1;
+    flag = (carrier[2] == 2 && carrier[1] > 5) || flag == 0 ? 0 : 1;
+    flag = carrier[2] == 4 && carrier[1] < 4 || flag == 0 ? 0 : 1;
+
+    flag = battleship[2] == 1 && battleship[0] < 3 || flag == 0 ? 0 : 1;
+    flag = battleship[2] == 3 && battleship[0] > 6 || flag == 0 ? 0 : 1;
+    flag = (battleship[2] == 2 && battleship[1] > 6) || flag == 0 ? 0 : 1;
+    flag = battleship[2] == 4 && battleship[1] < 3 || flag == 0 ? 0 : 1;
+
+    flag = destroyer[2] == 1 && destroyer[0] < 2 || flag == 0 ? 0 : 1;
+    flag = destroyer[2] == 3 && destroyer[0] > 7 || flag == 0 ? 0 : 1;
+    flag = (destroyer[2] == 2 && destroyer[1] > 7) || flag == 0 ? 0 : 1;
+    flag = destroyer[2] == 4 && destroyer[1] < 2 || flag == 0 ? 0 : 1;
+
+    flag = cruiser1[2] == 1 && cruiser1[0] < 1 || flag == 0 ? 0 : 1;
+    flag = cruiser1[2] == 3 && cruiser1[0] > 8 || flag == 0 ? 0 : 1;
+    flag = (cruiser1[2] == 2 && cruiser1[1] > 8) || flag == 0 ? 0 : 1;
+    flag = cruiser1[2] == 4 && cruiser1[1] < 1 || flag == 0 ? 0 : 1;
+
+    flag = cruiser2[2] == 1 && cruiser2[0] < 1 || flag == 0 ? 0 : 1;
+    flag = cruiser2[2] == 3 && cruiser2[0] > 8 || flag == 0 ? 0 : 1;
+    flag = (cruiser2[2] == 2 && cruiser2[1] > 8) || flag == 0 ? 0 : 1;
+    flag = cruiser2[2] == 4 && cruiser2[1] < 1 || flag == 0 ? 0 : 1;
+
+    flag = carrier[1] >9 || carrier[1] < 0 || carrier[0] < 0 || carrier[0] > 9 || flag == 0 ? 0 : 1;
+    flag = battleship[1] >9 || battleship[1] < 0 || battleship[0] < 0 || battleship[0] > 9 || flag == 0 ? 0 : 1;
+    flag = destroyer[1] >9 || destroyer[1] < 0 || destroyer[0] < 0 || destroyer[0] > 9 || flag == 0 ? 0 : 1;
+    flag = cruiser1[1] >9 || cruiser1[1] < 0 || cruiser1[0] < 0 || cruiser1[0] > 9 || flag == 0 ? 0 : 1;
+    flag = cruiser2[1] >9 || cruiser2[1] < 0 || cruiser2[0] < 0 || cruiser2[0] > 9 || flag == 0 ? 0 : 1;
+    flag = sub1[1] >9 || sub1[1] < 0 || sub1[0] < 0 || sub1[0] > 9 || flag == 0 ? 0 : 1;
+    flag = sub2[1] >9 || sub2[1] < 0 || sub2[0] < 0 || sub2[0] > 9 || flag == 0 ? 0 : 1;
+
+    assert(flag == 1);
+
+    for u32 i in 0..5{
+        u32 sxc = carrier[2] == 4 ? -1 : 1;
+        u32 xc = carrier[2] == 2 || carrier[2] == 4 ? carrier[1] + sxc*i : carrier[1];
+        u32 syc = carrier[2] == 1 ? -1 : 1;
+        u32 yc = carrier[2] == 1 || carrier[2] == 3 ? carrier[0] + syc*i : carrier[0];
+        flag = board[yc][xc] == 1 || flag == 0 ? 0 : 1;
+        board[yc][xc] = 1;
+
+    }
+
+ 
+
+    for u32 j in 0..4{
+        u32 sxb = battleship[2] == 4 ? -1 : 1;
+        u32 xb = battleship[2] == 2 || battleship[2] == 4 ? battleship[1] + sxb*j : battleship[1];
+        u32 syb = battleship[2] == 1 ? -1 : 1;
+        u32 yb = battleship[2] == 1 || battleship[2] == 3 ? battleship[0] + syb*j : battleship[0];
+        flag = board[yb][xb] == 1 || flag == 0 ? 0 : 1;
+        board[yb][xb] = 1;
+    }
+
+
+    for u32 k in 0..3{
+        u32 sxd = destroyer[2] == 4 ? -1 : 1;
+        u32 xd = destroyer[2] == 2 || destroyer[2] == 4 ? destroyer[1] + sxd*k : destroyer[1];
+        u32 syd = destroyer[2] == 1 ? -1 : 1;
+        u32 yd = destroyer[2] == 1 || destroyer[2] == 3 ? destroyer[0] + syd*k : destroyer[0];
+        flag = board[yd][xd] == 1 || flag == 0 ? 0 : 1;
+        board[yd][xd] = 1;
+    }
+
+    for u32 l in 0..2{
+        u32 sxc1 = cruiser1[2] == 4 ? -1 : 1;
+        u32 xc1 = cruiser1[2] == 2 || cruiser1[2] == 4 ? cruiser1[1] + sxc1*l : cruiser1[1];
+        u32 syc1 = cruiser1[2] == 1 ? -1 : 1;
+        u32 yc1 = cruiser1[2] == 1 || cruiser1[2] == 3 ? cruiser1[0] + syc1*l : cruiser1[0];
+        flag = board[yc1][xc1] == 1 || flag == 0 ? 0 : 1;
+        board[yc1][xc1] = 1;
+    }
+
+    for u32 m in 0..2{
+        u32 sxc2 = cruiser2[2] == 4 ? -1 : 1;
+        u32 xc2 = cruiser2[2] == 2 || cruiser2[2] == 4 ? cruiser2[1] + sxc2*m : cruiser2[1];
+        u32 syc2 = cruiser2[2] == 1 ? -1 : 1;
+        u32 yc2 = cruiser2[2] == 1 || cruiser2[2] == 3 ? cruiser2[0] + syc2*m : cruiser2[0];
+        flag = board[yc2][xc2] == 1 || flag == 0 ? 0 : 1;
+        board[yc2][xc2] = 1;
+    }
+
+
+    u32 xs1 = sub1[1];
+    u32 ys1 = sub1[0];
+    flag = board[ys1][xs1] == 1 || flag == 0 ? 0 : 1;
+    board[ys1][xs1] = 1;
+
+   
+    u32 xs2 = sub2[1];
+    u32 ys2 = sub2[0];
+    flag = board[ys2][xs2] == 1 || flag == 0 ? 0 : 1;
+    board[ys2][xs2] = 1;
+    
+    assert(flag == 1);  
+    u32 mut counter = 0;
+
+    for u32 i in 0..10{
+        for u32 j in 0..10{
+            array[counter] = board[i][j];
+            counter = counter + 1;
+        }
+    }
+
+    array[100] = nonce;
+
+    u32[8] hash2 = sha256Padded(array);
+
+
+    return hash2;
+ 
+    
+}
