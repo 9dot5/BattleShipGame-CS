@@ -1,7 +1,17 @@
-'''import socket
+import socket
 import threading
+import hashlib
+import hmac
 
+SECRET_KEY = b'secret'
 clients = {}
+
+def sign_message(message):
+    return hmac.new(SECRET_KEY, message.encode(), hashlib.sha256).hexdigest()
+
+def verify_message(message, signature):
+    expected_signature = hmac.new(SECRET_KEY, message.encode(), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected_signature, signature)
 
 def handle_client(addr, message):
     if addr not in clients:
@@ -11,7 +21,8 @@ def handle_client(addr, message):
 
 def send_message_to_client(addr, message):
     if addr in clients:
-        server_socket.sendto(message.encode(), addr)
+        message_signature = sign_message(message)
+        server_socket.sendto(f"{message}|{message_signature}".encode(), addr)
     else:
         print(f'No client with address {addr} connected.')
 
@@ -25,11 +36,8 @@ def list_clients():
 
 def parse_address(addr_str):
     try:
-        # Remove parentheses and spaces
         addr_str = addr_str.strip('() ')
-        # Split the string by comma
         host, port = addr_str.split(',')
-        # Remove extra spaces and quotes
         host = host.strip().strip('\'"')
         port = port.strip()
         return (host, int(port))
@@ -62,83 +70,20 @@ def start_server(host='127.0.0.1', port=65432):
     global server_socket
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_socket.bind((host, port))
-    print(f'Server listening on {host}:{port}')
-    
+    print(f'Server started at {host}:{port}')
+
     threading.Thread(target=server_input_handler, daemon=True).start()
 
-    while True:
-        data, addr = server_socket.recvfrom(1024)
-        message = data.decode()
-        client_thread = threading.Thread(target=handle_client, args=(addr, message))
-        client_thread.start()
-
-if __name__ == '__main__':
-    start_server()'''
-
-import socket
-import threading
-
-clients = {}
-
-def handle_client(addr, message):
-    if addr not in clients:
-        username = message.split()[1]  # Assume the join message is "join <username>"
-        clients[addr] = username
-        print(f'New client joined: {username} ({addr})')
-    else:
-        print(f'Received from {clients[addr]}: {message}')
-
-def send_message_to_client(username, message):
-    addr = None
-    for client_addr, client_username in clients.items():
-        if client_username == username:
-            addr = client_addr
-            break
-    if addr:
-        server_socket.sendto(message.encode(), addr)
-    else:
-        print(f'No client with username {username} connected.')
-
-def list_clients():
-    if clients:
-        print("Connected clients:")
-        for addr, username in clients.items():
-            print(f'{username} ({addr})')
-    else:
-        print("No clients connected.")
-
-def server_input_handler():
     while True:
         try:
-            command = input('Enter command (list | send <username> <message>): ')
-            if command.startswith('list'):
-                list_clients()
-            elif command.startswith('send'):
-                parts = command.split(' ', 2)
-                if len(parts) >= 3:
-                    username = parts[1]
-                    message = parts[2]
-                    send_message_to_client(username, message)
-                else:
-                    print("Invalid send command format. Use 'send <username> <message>'.")
+            data, addr = server_socket.recvfrom(1024)
+            message, signature = data.decode().rsplit('|', 1)
+            if verify_message(message, signature):
+                handle_client(addr, message)
             else:
-                print("Invalid command. Use 'list' or 'send <username> <message>'.")
+                print("Invalid message signature from", addr)
         except Exception as e:
             print(f'Error: {e}')
-            
-def start_server(host='127.0.0.1', port=65432):
-    global server_socket
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server_socket.bind((host, port))
-    print(f'Server listening on {host}:{port}')
-    
-    threading.Thread(target=server_input_handler, daemon=True).start()
-
-    while True:
-        data, addr = server_socket.recvfrom(1024)
-        message = data.decode()
-        client_thread = threading.Thread(target=handle_client, args=(addr, message))
-        client_thread.start()
 
 if __name__ == '__main__':
     start_server()

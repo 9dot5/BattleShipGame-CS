@@ -1,4 +1,7 @@
-board = [[0 for _ in range(10)] for _ in range(10)] 
+import random
+import hashlib
+
+board = [[0 for _ in range(10)] for _ in range(10)]
 
 counter = 0
 
@@ -11,12 +14,9 @@ sub1 = []
 sub2 = []
 
 for x in [5, 4, 3, 2, 2, 1, 1]:
-
     invalid_move = 1
-
     while invalid_move:
         invalid_move = 0
-
         if x == 5:
             print("Carrier position:")
         if x == 4:
@@ -33,45 +33,31 @@ for x in [5, 4, 3, 2, 2, 1, 1]:
                 print("First submarine position:")
             if counter == 6:
                 print("Second submarine position:")
-        linha= input("linha:")
-        
+        linha = input("linha:")
         while int(linha) > 10 or int(linha) < 1:
             print("posicao invalida\n")
-            linha= input("linha:")
+            linha = input("linha:")
             continue
-
-        coluna= input("coluna:")
-
+        coluna = input("coluna:")
         while int(coluna) > 10 or int(coluna) < 1:
             print("posicao invalida\n")
-            coluna= input("coluna:")
+            coluna = input("coluna:")
             continue
-
         linhas = int(linha) - 1
         colunas = int(coluna) - 1
-
-
-
         orientacao = input("orientação (u, d, l, r)")
-
-           
-        
-
         while orientacao not in ['u', 'd', 'l', 'r']:
             print("direcção invalida\n")
             orientacao = input("orientação (u, d, l, r)")
             continue
-        
         if orientacao == 'u':
             direcao = 1
         if orientacao == 'r':
             direcao = 2
         if orientacao == 'd':
-            direcao == 3
+            direcao = 3
         if orientacao == 'l':
-            direcao == 4
-
-            
+            direcao = 4
         if x == 5:
             carrier.append(linhas)
             carrier.append(colunas)
@@ -102,83 +88,27 @@ for x in [5, 4, 3, 2, 2, 1, 1]:
                 sub2.append(linhas)
                 sub2.append(colunas)
                 sub2.append(direcao)
-        
-        if orientacao == 'u' and int(linhas) < x-1:
-            print("posicao invalida\n")
-            invalid_move=1
-            continue
+        counter += 1
 
+# Combine all positions into a single fleet dictionary
+fleet = {
+    'carrier': carrier,
+    'battleship': battleship,
+    'destroyer': destroyer,
+    'cruiser1': cruiser1,
+    'cruiser2': cruiser2,
+    'sub1': sub1,
+    'sub2': sub2
+}
 
-        if orientacao == 'd' and int(linhas) > 10-x:
-            print("posicao invalida\n")
-            invalid_move=1
-            continue
+# Commit the fleet positions
+nonce = random.randint(0, int(1e9))
+fleet_str = str(fleet) + str(nonce)
+positions_hash = hashlib.sha256(fleet_str.encode()).hexdigest()
+print(f"Fleet committed with nonce {nonce} and hash {positions_hash}")
 
-
-        if orientacao == 'l' and int(colunas) < x-1:
-            print("posicao invalida\n")
-            invalid_move=1
-            continue
-
-
-        if orientacao == 'r' and int(colunas) > 10-x:
-            print("posicao invalida\n")
-            invalid_move=1
-            continue
-        
-        for y in range(x):
-            if orientacao == 'u':
-                if board[int(linhas) - y][int(colunas)] == 1:
-                    print("posicao invalida\n")
-                    invalid_move=1
-                    break
-
-            if orientacao == 'd':
-                if board[int(linhas)+ y][int(colunas) ] == 1:
-                    print("posicao invalida\n")
-                    invalid_move=1
-                    break
-
-            if orientacao == 'l':
-                if board[int(linhas)][int(colunas) - y ] == 1:
-                    print("posicao invalida\n")
-                    invalid_move=1
-                    break
-
-            if orientacao == 'r':
-                if board[int(linhas)][int(colunas) + y] == 1:
-                    print("posicao invalida\n")
-                    invalid_move=1
-                    break
-
-
-
-    for y in range(x):
-        if orientacao == 'u':
-            board[int(linhas) - y][int(colunas)] = 1
-        if orientacao == 'd':
-            board[int(linhas)+ y][int(colunas) ] = 1
-        if orientacao == 'l':
-            board[int(linhas) ][int(colunas) - y] = 1
-        if orientacao == 'r':
-            board[int(linhas)][int(colunas) +y ] = 1
-
-    if invalid_move == 0:
-        counter = counter + 1
-
-
-
-board_vec = []
-
-for row in board:
-    for num in row:
-        board_vec.append(int(num)) 
-
-print("board:")
-for row in  board:
-    print(row)
-
-print("\n")
-print("board vector:")
-
-print(board_vec)
+# Save the fleet positions to use them in zkproof.py
+with open("fleet_positions.txt", "w") as file:
+    file.write(str(fleet))
+    file.write("\n")
+    file.write(str(nonce))

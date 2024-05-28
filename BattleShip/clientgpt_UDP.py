@@ -1,25 +1,15 @@
-'''import socket
-
-def main():
-    host = '127.0.0.1'
-    port = 65432
-
-    join_input = input("Type 'join' to join the server: ")
-    if join_input.lower().strip() == 'join':
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            server_address = (host, port)
-            s.sendto("join".encode(), server_address)
-            print("Joined the communication.")
-            while True:
-                data, _ = s.recvfrom(1024)  # Receive message from the server
-                print("Server:", data.decode())
-                reply = input("Enter your reply: ")  # Get reply from the user
-                s.sendto(reply.encode(), server_address)  # Send the reply back to the server
-
-if __name__ == '__main__':
-    main()'''
-
 import socket
+import hashlib
+import hmac
+
+SECRET_KEY = b'secret'
+
+def sign_message(message):
+    return hmac.new(SECRET_KEY, message.encode(), hashlib.sha256).hexdigest()
+
+def verify_message(message, signature):
+    expected_signature = hmac.new(SECRET_KEY, message.encode(), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected_signature, signature)
 
 def main():
     host = '127.0.0.1'
@@ -31,14 +21,26 @@ def main():
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
             server_address = (host, port)
             join_message = f"join {username}"
-            s.sendto(join_message.encode(), server_address)
+            join_signature = sign_message(join_message)
+            s.sendto(f"{join_message}|{join_signature}".encode(), server_address)
             print("Joined the communication.")
-            while True:
-                data, _ = s.recvfrom(1024)  # Receive message from the server
-                print("Server:", data.decode())
-                reply = input("Enter your reply: ")  # Get reply from the user
-                s.sendto(reply.encode(), server_address)  # Send the reply back to the server
+            handle_communication(s, server_address)
+
+def handle_communication(socket, server_address):
+    while True:
+        try:
+            data, _ = socket.recvfrom(1024)
+            message, signature = data.decode().rsplit('|', 1)
+            if verify_message(message, signature):
+                print("Server:", message)
+                reply = input("Enter your reply: ")
+                reply_signature = sign_message(reply)
+                socket.sendto(f"{reply}|{reply_signature}".encode(), server_address)
+            else:
+                print("Invalid message signature.")
+        except Exception as e:
+            print(f"Communication error: {e}")
+            break
 
 if __name__ == '__main__':
     main()
-
