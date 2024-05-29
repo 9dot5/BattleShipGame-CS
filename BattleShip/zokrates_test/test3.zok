@@ -1,0 +1,25 @@
+import "hashes/sha256/sha256Padded";
+
+def main(private u8[100] mut fleet,private u8 nonce) -> u32[8] {
+
+    u8 mut flag = 0;
+    u8[101] mut array = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+
+    for u32 i in 0..100{
+        flag = fleet[i] == 1 || flag == 1 ? 1 : 0;
+    }
+
+    assert(flag == 1);
+
+    for u32 i in 0..100{
+        array[i] = fleet[i];
+    }
+
+    array[100] = nonce;
+
+    u32[8] hash = sha256Padded(array);
+
+    return hash;
+ 
+    
+}
