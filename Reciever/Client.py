@@ -5,10 +5,11 @@ import random
 import os
 
 nonce = random.randint(0,255)
+board = [[0 for _ in range(10)] for _ in range(10)] 
 
 def Generate_Board():
 
-    board = [[0 for _ in range(10)] for _ in range(10)] 
+    
 
     counter = 0
 
@@ -160,24 +161,61 @@ def Generate_Board():
                         print("posicao invalida\n")
                         invalid_move=1
                         break
+
+        for y in range(x):
+            if orientacao == 'u':
+                board[int(linhas) - y][int(colunas)] = 1
+            if orientacao == 'd':
+                board[int(linhas)+ y][int(colunas) ] = 1
+            if orientacao == 'l':
+                board[int(linhas) ][int(colunas) - y] = 1
+            if orientacao == 'r':
+                board[int(linhas)][int(colunas) +y ] = 1
+
         if invalid_move == 0:
             counter = counter + 1
 
     return carrier,battleship,destroyer,cruiser1,cruiser2,sub1,sub2
 
+def Report(x,y,board):
+
+    if board[y][x] == 1:
+        hit = 1
+    elif board[y][x] == 0:
+        hit = 0
+
+    
+    
+    return hit
+
+
+
+
+
 def main():
     host = '127.0.0.1'
     port = 65432
+    main_path = os.getcwd()
+    command = "0 0 0"
 
     s = socket(AF_INET, SOCK_DGRAM)
     server_address = (host, port)
     print("Joined the communication.")
-    while True:
-        
-        command = input("Enter your reply: ")  # Get reply from the user
-        s.sendto(command.encode(), server_address)  # Send the reply back to the server
+    s.sendto("Hello".encode(),server_address)
+    valid = 1
 
-        if command.split()[0] == "create":
+    while True:
+
+        os.chdir(main_path)
+        if valid == 1:
+            data,server_address = s.recvfrom(1024)
+
+        command = input("Enter your reply: ")  # Get reply from the user
+        
+        
+
+        if command.split()[0].lower() == "create" or command.split()[0].lower() == "join":
+            valid = 1
             params = []
             carrier,battleship,destroyer,cruiser1,cruiser2,sub1,sub2 = Generate_Board()
             witness = ""
@@ -206,9 +244,75 @@ def main():
             os.system(f"zokrates compute-witness -a {witness}")
             os.system("zokrates generate-proof")
 
-            s.sendto("Proof 1".encode(),server_address)
+            s.sendto(f"{command}".encode(),server_address)
 
-            proof = open("1/proof.json")
+            proof = open("proof.json",'rb')
+
+            data = proof.read(1024)
+            print("sending ...")
+            while (data):
+                if(s.sendto(data,server_address)):
+                    data = proof.read(1024)
+
+            response,addr = s.recvfrom(1024)
+            print(response.decode())
+
+            proof.close()
+        
+        if command.split()[0].lower() == "list":
+            valid = 1
+            s.sendto(f"{command}".encode(),server_address)
+            response,addr = s.recvfrom(1024)
+            print(response.decode())
+
+        if command.split()[0].lower() == "report":
+            os.chdir("2")
+            valid = 1
+            hit = Report(int(command.split()[1]),int(command.split()[2]),board)
+
+            params = []
+
+            params.append(hit)
+            params.append(nonce)
+
+            for i in range(10):
+                for j in range(10):
+                    params.append(board[i][j])
+            params.append(command.split()[1])
+            params.append(command.split()[2])
+
+            witness2 = ""
+
+            for x in params:
+                witness2 = witness2 + f" {x}"
+
+            print(witness2)
+
+            board[int(command.split()[1])][int(command.split()[2])] = 0
+            
+            os.system(f"zokrates compute-witness -a {witness2}")
+            os.system("zokrates generate-proof")
+
+            s.sendto(f"{command}".encode(),server_address)
+
+            proof = open("proof.json",'rb')
+
+            data = proof.read(1024)
+            print("sending ...")
+            while (data):
+                if(s.sendto(data,server_address)):
+                    data = proof.read(1024)
+
+            response,addr = s.recvfrom(1024)
+            print(response.decode())
+
+            proof.close()
+            continue
+
+        else:
+            print("Invalid Command")
+            valid = 0
+
 
             
             
@@ -218,9 +322,7 @@ def main():
 
 
 
-        data, _ = s.recvfrom(1024)  # Receive message from the server
-        print("Server:", data.decode())
-        aux = data.decode().split( )
+        
 
         
 
