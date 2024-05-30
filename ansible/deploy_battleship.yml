@@ -1,0 +1,64 @@
+---
+- hosts: localhost
+  become: yes
+  tasks:
+    - name: Ensure required packages are installed
+      apt:
+        name:
+          - python3
+          - python3-venv
+          - python3-pip
+          - git
+          - unzip
+          - build-essential
+          - libssl-dev
+          - pkg-config
+          - curl
+          - cmake
+        state: present
+        update_cache: yes
+      # This task installs the necessary packages
+
+    - name: Clone the Battleship game repository
+      git:
+        repo: 'https://github.com/9dot5/BattleShipGame-CS.git'
+        dest: '/mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/git/BattleShipGame-CS'
+        version: 'Joao_Santos'
+        force: yes
+      # This task clones the repository from GitHub
+
+    - name: Create virtual environment
+      command: python3 -m venv /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/git/BattleShipGame-CS/venv
+      args:
+        creates: /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/git/BattleShipGame-CS/venv
+      # This task creates a Python virtual environment
+
+    - name: Clone ZoKrates repository
+      git:
+        repo: 'https://github.com/Zokrates/ZoKrates.git'
+        dest: '/mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/zokrates'
+      # This task clones the ZoKrates repository
+
+    - name: Build ZoKrates
+      shell: |
+        cd /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/zokrates
+        cargo build --release
+      args:
+        creates: /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/zokrates/target/release/zokrates
+      # This task builds ZoKrates from source
+
+    - name: Move ZoKrates binary to /usr/local/bin
+      copy:
+        src: /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/zokrates/target/release/zokrates
+        dest: /usr/local/bin/zokrates
+        mode: '0755'
+      # This task moves the ZoKrates binary to /usr/local/bin
+
+    - name: Start the server
+      shell: |
+        source /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/git/BattleShipGame-CS/venv/bin/activate
+        which python
+        nohup /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/git/BattleShipGame-CS/venv/bin/python /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/git/BattleShipGame-CS/BattleShip/Battleship.py > /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/server.log 2>&1 &
+      args:
+        creates: /tmp/battleship_server_running
+
