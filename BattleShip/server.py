@@ -17,6 +17,7 @@ class Game():
         self.host = host
         self.players = []
         self.hash = {}
+        self.last_shot=[]
 
 
 
@@ -48,6 +49,7 @@ def Join(game_nr,addr,username):
                 print(g.hash[f"{username}"])
                 print(g.players)
                 server_socket.sendto("Game joined successfuly".encode(),addr)
+                server_socket.sendto("Play".encode(),addr)
 
                 clients[f"{username}"] = addr
                 return
@@ -149,7 +151,7 @@ def Report(addr,x,y):
 
                     print(json_data["inputs"][2:10])
 
-                    if json_data["inputs"][2:10] == g.hash[f"{username}"] and json_data["inputs"][0] == x_ and json_data["inputs"][1] == y_ :
+                    if json_data["inputs"][2:10] == g.hash[f"{username}"] and json_data["inputs"][0] == g.last_shot[0] and json_data["inputs"][1] == g.last_shot[1] :
 
 
                         g.hash[f"{username}"] = json_data["inputs"][10:]
@@ -161,14 +163,77 @@ def Report(addr,x,y):
                         return
                 
                 server_socket.sendto("Proof not accepted.".encode(),addr)
+                server_socket.sendto("Try again:".encode(),addr)
                 return
-    server_socket.sendto("Player not in a game".encode(),addr)
-
-    
-
-    
+    server_socket.sendto("Player not in a game".encode(),addr) 
+    server_socket.sendto("Try again:".encode(),addr)
 
     return
+
+def Shoot(addr,x,y,target):
+    for name,address in clients.items():
+        if address == addr:
+            username = name
+    
+    for g in games:
+        for player in g.players:
+            if player == username:
+                for target_ in g.players:
+                    if target_ == target:
+
+                        for name2,address2 in clients.items():
+                            if name2 == target:
+                                target_addr = address2
+                        
+                        f = open(f"proof.json","wb")
+                        data,addr = server_socket.recvfrom(1024)
+
+                        try:
+                            while(data):
+                                f.write(data)
+                                server_socket.settimeout(2)
+                                data,addr = server_socket.recvfrom(1024)
+                        except timeout:
+                            f.close()
+                            
+                            print("File Downloaded")
+
+                        verifier = os.system("zokrates verify")
+
+                        if verifier == 0:
+
+                            json_file = open(f"proof.json")
+                            json_data = json.load(json_file)
+
+                            print(json_data["inputs"])
+
+                            if json_data["inputs"] == g.hash[f"{username}"]:
+
+
+                                print(g.hash[f"{username}"])
+                                server_socket.sendto("Shot Sent successfuly".encode(),addr)
+                                server_socket.sendto(f"Recieved Shot: {x} {y}".encode(),target_addr)
+                                g.last_shot = [f"0x000000000000000000000000000000000000000000000000000000000000000{x}",f"0x000000000000000000000000000000000000000000000000000000000000000{y}"]
+                                return
+                            else:
+                                print("HASH GO BRR")
+                        else:
+                            print(f"Verifier go BR? Verifier {verifier}")
+
+                        server_socket.sendto("Failed Proof".encode(),addr)
+                        server_socket.sendto("Try again:".encode(),addr)
+
+                        return
+                    
+                server_socket.sendto("Target not in game".encode(),addr)
+                server_socket.sendto("Try again:".encode(),addr)
+                return
+        server_socket.sendto("Player not in a game".encode(),addr)
+        server_socket.sendto("Try again:".encode(),addr)
+        return
+
+
+
 
 
 
@@ -216,6 +281,11 @@ def start_server(host='127.0.0.1', port=65432):
             if len(aux) == 3:
                 os.chdir("proof2")
                 Report(addr,aux[1],aux[2])
+
+        if aux[0].lower() == "shoot":
+            if len(aux) == 4:
+                os.chdir("proof3")
+                Shoot(addr,aux[1],aux[2],aux[3])
 
 
 
