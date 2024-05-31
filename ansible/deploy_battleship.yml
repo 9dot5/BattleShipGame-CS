@@ -15,50 +15,186 @@
           - pkg-config
           - curl
           - cmake
+          - screen
         state: present
         update_cache: yes
-      # This task installs the necessary packages
 
     - name: Clone the Battleship game repository
       git:
         repo: 'https://github.com/9dot5/BattleShipGame-CS.git'
-        dest: '/mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/git/BattleShipGame-CS'
+        dest: '/mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS'
         version: 'Joao_Santos'
         force: yes
-      # This task clones the repository from GitHub
 
     - name: Create virtual environment
-      command: python3 -m venv /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/git/BattleShipGame-CS/venv
+      command: python3 -m venv /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/venv
       args:
-        creates: /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/git/BattleShipGame-CS/venv
-      # This task creates a Python virtual environment
+        creates: /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/venv
 
-    - name: Clone ZoKrates repository
-      git:
-        repo: 'https://github.com/Zokrates/ZoKrates.git'
-        dest: '/mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/zokrates'
-      # This task clones the ZoKrates repository
-
-    - name: Build ZoKrates
-      shell: |
-        cd /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/zokrates
-        cargo build --release
+    - name: Install ZoKrates
+      shell: curl -LSfs get.zokrat.es | sh
       args:
-        creates: /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/zokrates/target/release/zokrates
-      # This task builds ZoKrates from source
+        creates: /usr/local/bin/zokrates
 
-    - name: Move ZoKrates binary to /usr/local/bin
-      copy:
-        src: /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/zokrates/target/release/zokrates
-        dest: /usr/local/bin/zokrates
+    - name: Ensure necessary directory structure exists
+      file:
+        path: '/mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/{{ item }}'
+        state: directory
         mode: '0755'
-      # This task moves the ZoKrates binary to /usr/local/bin
+      loop:
+        - Test_ZOK
+        - Test_ZOK2
+        - Test_ZOK3
+        - BattleShip
+        - BattleShip/proof3
+        - BattleShip/proof2
+        - BattleShip/zokrates_test
+        - Reciever
+        - Reciever/3
+        - Reciever/2
+        - Reciever/1
 
-    - name: Start the server
+    - name: Ensure ZoKrates stdlib directory exists
+      file:
+        path: /mnt/c/Users/rsilv/.zokrates/stdlib
+        state: directory
+        mode: '0755'
+
+    - name: Set up ZoKrates for Test_ZOK
       shell: |
-        source /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/git/BattleShipGame-CS/venv/bin/activate
-        which python
-        nohup /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/git/BattleShipGame-CS/venv/bin/python /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/git/BattleShipGame-CS/BattleShip/Battleship.py > /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/server.log 2>&1 &
+        export PATH=$PATH:/usr/local/bin
+        zokrates compile -i test.zok
+        zokrates setup
+      args:
+        chdir: /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK
+      environment:
+        PATH: "/usr/local/bin:{{ ansible_env.PATH }}"
+
+    - name: Check for out file in Test_ZOK
+      stat:
+        path: /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK/out
+      register: test_zok_out
+
+    - name: Debug Test_ZOK out file status
+      debug:
+        msg: "Test_ZOK out file exists: {{ test_zok_out.stat.exists }}"
+
+    - name: Set up ZoKrates for Test_ZOK2
+      shell: |
+        export PATH=$PATH:/usr/local/bin
+        zokrates compile -i test2.zok
+        zokrates setup
+      args:
+        chdir: /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK2
+      environment:
+        PATH: "/usr/local/bin:{{ ansible_env.PATH }}"
+
+    - name: Check for out file in Test_ZOK2
+      stat:
+        path: /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK2/out
+      register: test_zok2_out
+
+    - name: Debug Test_ZOK2 out file status
+      debug:
+        msg: "Test_ZOK2 out file exists: {{ test_zok2_out.stat.exists }}"
+
+    - name: Set up ZoKrates for Test_ZOK3
+      shell: |
+        export PATH=$PATH:/usr/local/bin
+        zokrates compile -i test3.zok
+        zokrates setup
+      args:
+        chdir: /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK3
+      environment:
+        PATH: "/usr/local/bin:{{ ansible_env.PATH }}"
+
+    - name: Check for out file in Test_ZOK3
+      stat:
+        path: /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK3/out
+      register: test_zok3_out
+
+    - name: Debug Test_ZOK3 out file status
+      debug:
+        msg: "Test_ZOK3 out file exists: {{ test_zok3_out.stat.exists }}"
+
+    - name: Move out files to server directories
+      shell: |
+        mv /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK3/out /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/BattleShip/proof3/
+        mv /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK2/out /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/BattleShip/proof2/
+        mv /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK/out /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/BattleShip/zokrates_test/
+      when: test_zok3_out.stat.exists and test_zok2_out.stat.exists and test_zok_out.stat.exists
+
+    - name: Check for verification file in Test_ZOK3
+      stat:
+        path: /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK3/verification.key
+      register: verification_zok3_out
+
+    - name: Check for verification file in Test_ZOK2
+      stat:
+        path: /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK2/verification.key
+      register: verification_zok2_out
+
+    - name: Check for verification file in Test_ZOK
+      stat:
+        path: /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK/verification.key
+      register: verification_zok_out
+
+    - name: Move verification files to server directories
+      shell: |
+        mv /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK3/verification.key /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/BattleShip/proof3/
+        mv /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK2/verification.key /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/BattleShip/proof2/
+        mv /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK/verification.key /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/BattleShip/zokrates_test/
+      when: verification_zok3_out.stat.exists and verification_zok2_out.stat.exists and verification_zok_out.stat.exists
+
+    - name: Move out files to Reciever directories
+      shell: |
+        mv /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK3/out /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Reciever/3/
+        mv /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK2/out /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Reciever/2/
+        mv /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK/out /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Reciever/1/
+      when: test_zok3_out.stat.exists and test_zok2_out.stat.exists and test_zok_out.stat.exists
+
+    - name: Check for proving file in Test_ZOK3
+      stat:
+        path: /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK3/proving.key
+      register: proving_zok3_out
+
+    - name: Check for proving file in Test_ZOK2
+      stat:
+        path: /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK2/proving.key
+      register: proving_zok2_out
+
+    - name: Check for proving file in Test_ZOK
+      stat:
+        path: /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK/proving.key
+      register: proving_zok_out
+
+    - name: Move proving files to Reciever directories
+      shell: |
+        mv /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK3/proving.key /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Reciever/3/
+        mv /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK2/proving.key /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Reciever/2/
+        mv /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Test_ZOK/proving.key /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Reciever/1/
+      when: proving_zok3_out.stat.exists and proving_zok2_out.stat.exists and proving_zok_out.stat.exists
+
+    - name: Start the server in a screen session
+      shell: |
+        source /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/venv/bin/activate
+        screen -dmS battleship_server bash -c 'python /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/BattleShip/server.py'
       args:
         creates: /tmp/battleship_server_running
+
+    - name: Start client 1 in a screen session
+      shell: |
+        source /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/venv/bin/activate
+        screen -dmS battleship_client1 bash -c 'python /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Reciever/Client.py'
+      args:
+        creates: /tmp/battleship_client1_running
+
+    - name: Start client 2 in a screen session
+      shell: |
+        source /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/venv/bin/activate
+        screen -dmS battleship_client2 bash -c 'python /mnt/c/Users/rsilv/OneDrive/Documentos/CS/BattleShipGame-CS/Ultima_versao/Reciever/Client.py'
+      args:
+        creates: /tmp/battleship_client2_running
+
+    # Add more clients if needed
 
