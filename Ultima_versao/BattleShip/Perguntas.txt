@@ -1,6 +1,0 @@
-Proofs estão bem? ---------
-Maneira de enviar as keys e as proofs está certa?---------
-Interacao Jogador Servidor está correta?
-Basta o servidor recusar comandos de jogada inválidos? (Querer mandar um tiro fora de turno por exemplo)-------
-Quando um jogador dá wave à turn a jogada volta para quem mandou o tiro?-----------
-O que esperar quando um jogador acusa vitória? Os jogadores admitem que perdem? ----------

@@ -291,10 +291,6 @@ def main():
 
             for x in params:
                 witness2 = witness2 + f" {x}"
-
-            print(witness2)
-
-            board[int(command.split()[2])][int(command.split()[1])] = 0
             
             os.system(f"zokrates compute-witness -a {witness2}")
             os.system("zokrates generate-proof")
@@ -310,7 +306,11 @@ def main():
                     data = proof.read(1024)
 
             response,addr = s.recvfrom(1024)
-            print(response.decode())
+            print(f"{response.decode()}")
+
+            if response.decode() == "Shot Reported Successfuly":
+                board[int(command.split()[2])][int(command.split()[1])] = 0
+
 
             proof.close()
             continue
@@ -344,6 +344,9 @@ def main():
             response,addr = s.recvfrom(1024)
             print(response.decode())
 
+            hit_or_miss,addr = s.recvfrom(1024)
+            print(hit_or_miss.decode())
+
             proof.close()
             continue
             
@@ -353,7 +356,76 @@ def main():
             response,addr = s.recvfrom(1024)
             print(response.decode())
         
-        #if command.split()[0].lower() == "claim":
+        if command.split()[0].lower() == "claim":
+            os.chdir("3")
+            valid = 1
+            params = []
+            witness3 = ""
+
+            for i in range(10):
+                for j in range(10):
+                    params.append(board[i][j])
+            params.append(nonce)
+
+            for x in params:
+                witness3 = witness3 + f" {x}"
+            
+            os.system(f"zokrates compute-witness -a {witness3}")
+            os.system("zokrates generate-proof")
+
+            s.sendto(f"{command}".encode(),server_address)
+            proof = open("proof.json",'rb')
+
+            data = proof.read(1024)
+            print("sending ...")
+            while (data):
+                if(s.sendto(data,server_address)):
+                    data = proof.read(1024)
+
+            response,addr = s.recvfrom(1024)
+            print(response.decode())
+
+            proof.close()
+            continue
+
+        if command.split()[0].lower() == "objection":
+            os.chdir("3")
+            valid = 1
+            params = []
+            witness3 = ""
+
+            for i in range(10):
+                for j in range(10):
+                    params.append(board[i][j])
+            params.append(nonce)
+
+            for x in params:
+                witness3 = witness3 + f" {x}"
+            
+            os.system(f"zokrates compute-witness -a {witness3}")
+            os.system("zokrates generate-proof")
+
+            s.sendto(f"{command}".encode(),server_address)
+            proof = open("proof.json",'rb')
+
+            data = proof.read(1024)
+            print("sending ...")
+            while (data):
+                if(s.sendto(data,server_address)):
+                    data = proof.read(1024)
+
+            response,addr = s.recvfrom(1024)
+            print(response.decode())
+
+            proof.close()
+            continue
+
+        if command.split()[0].lower() == "start":
+            s.sendto(f"{command}".encode(),server_address)
+
+            response,addr = s.recvfrom(1024)
+            print(response.decode())
+
 
         else:
             print("Invalid Command")

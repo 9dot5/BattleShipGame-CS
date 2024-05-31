@@ -18,16 +18,31 @@ class Game():
         self.players = []
         self.hash = {}
         self.last_shot=[]
-        self.last_play=[]
+        self.last_play=["",""]
         self.last_player=[]
         self.current_player=[]
+        self.winner = []
 
 
+
+def Start(addr):
+    for name,address in clients.items():
+        if address == addr:
+            username = name
+
+    for g in games:
+        if g.host == username:
+            server_socket.sendto("Starting Game...".encode(),addr)
+            g.current_player = addr
+            g.last_play = [addr,"start"]
+            server_socket.sendto("Your Turn".encode(),addr)
 
 
 def Join(game_nr,addr,username):
     f = open(f"proof.json","wb")
     data,addr = server_socket.recvfrom(1024)
+
+    
 
     try:
         while(data):
@@ -38,6 +53,12 @@ def Join(game_nr,addr,username):
         f.close()
         
         print("File Downloaded")
+
+    for name,address in clients.items():
+        if name == username or address == addr:
+            server_socket.sendto("Username or address already exist".encode(),addr)
+            server_socket.sendto("Try again".encode(),addr)
+            return
 
     verifier = os.system("zokrates verify")
     if verifier == 0:
@@ -52,7 +73,6 @@ def Join(game_nr,addr,username):
                 print(g.hash[f"{username}"])
                 print(g.players)
                 server_socket.sendto("Game joined successfuly".encode(),addr)
-                server_socket.sendto("Play".encode(),addr)
 
                 clients[f"{username}"] = addr
                 return
@@ -78,6 +98,12 @@ def Create(game_nr,addr,username):
         
         print("File Downloaded")
 
+    for name,address in clients.items():
+        if name == username or address == addr:
+            server_socket.sendto("Username or address already exist".encode(),addr)
+            server_socket.sendto("Try again".encode(),addr)
+            return
+
     verifier = os.system("zokrates verify")
     if verifier == 0:
 
@@ -95,11 +121,11 @@ def Create(game_nr,addr,username):
         new_game.hash[f"{username}"] = json_data["inputs"]
         games.append(new_game)
 
-        print(new_game.hash[f"{username}"])
         server_socket.sendto("Game created successfuly".encode(),addr)
+        server_socket.sendto("Start when ready".encode(),addr)
 
         clients[f"{username}"] = addr
-        print(clients)
+        
         return
     
     server_socket.sendto("Proof not accepted.".encode(),addr)
@@ -118,6 +144,8 @@ def List(game_nr,addr):
     return
 
 def Report(addr,x,y):
+
+
 
     x_ = f"0x000000000000000000000000000000000000000000000000000000000000000{x}"
     y_ = f"0x000000000000000000000000000000000000000000000000000000000000000{y}"
@@ -144,21 +172,37 @@ def Report(addr,x,y):
                     
                     print("File Downloaded")
 
+                if addr != g.current_player:
+                    server_socket.sendto("Not your turn".encode(),addr)
+                    server_socket.sendto(" ".encode(),addr)
+                    return
+
+                if g.last_play[1] != "shoot":
+                    server_socket.sendto("No shot to Report".encode(),addr)
+                    server_socket.sendto("Try again".encode(),addr)
+                    return
+
+                
+
                 verifier = os.system("zokrates verify")
                 if verifier == 0:
 
                     json_file = open(f"proof.json")
                     json_data = json.load(json_file)
 
-                    print(json_data["inputs"][2:10])
 
-                    if json_data["inputs"][2:10] == g.hash[f"{username}"] and json_data["inputs"][0] == g.last_shot[0] and json_data["inputs"][1] == g.last_shot[1] :
+                    if json_data["inputs"][3:11] == g.hash[f"{username}"] and json_data["inputs"][1] == g.last_shot[0] and json_data["inputs"][2] == g.last_shot[1] :
 
 
-                        g.hash[f"{username}"] = json_data["inputs"][10:]
+                        g.hash[f"{username}"] = json_data["inputs"][11:]
+                        if json_data["inputs"][0] == "0x0000000000000000000000000000000000000000000000000000000000000001":
+                            hit_or_miss = "Hit!"
+                        else:
+                            hit_or_miss = "Miss"
 
                         g.last_play=[addr,"report"]
                         server_socket.sendto("Shot Reported Successfuly".encode(),addr)
+                        server_socket.sendto(f"{hit_or_miss}".encode(),g.last_player)
                         server_socket.sendto("Your Turn!".encode(),addr)
 
                         return
@@ -179,6 +223,9 @@ def Shoot(addr,x,y,target):
     for g in games:
         for player in g.players:
             if player == username:
+
+                
+
                 for target_ in g.players:
                     if target_ == target:
 
@@ -199,6 +246,18 @@ def Shoot(addr,x,y,target):
                             
                             print("File Downloaded")
 
+                        if addr != g.current_player:
+                            server_socket.sendto("Not your turn".encode(),addr)
+                            server_socket.sendto(" ".encode(),addr)
+                            server_socket.sendto(" ".encode(),addr)
+                            return
+
+                        if g.last_play[1] == "shoot":
+                            server_socket.sendto("Report your shot first".encode(),addr)
+                            server_socket.sendto("Try again".encode(),addr)
+                            server_socket.sendto("  ".encode(),addr)
+                            return
+
                         verifier = os.system("zokrates verify")
 
                         if verifier == 0:
@@ -206,7 +265,7 @@ def Shoot(addr,x,y,target):
                             json_file = open(f"proof.json")
                             json_data = json.load(json_file)
 
-                            print(json_data["inputs"])
+
 
                             if json_data["inputs"] == g.hash[f"{username}"]:
 
@@ -219,22 +278,23 @@ def Shoot(addr,x,y,target):
                                 g.last_player = addr
                                 g.current_player = target_addr
                                 return
-                            else:
-                                print("HASH GO BRR")
-                        else:
-                            print(f"Verifier go BR? Verifier {verifier}")
+
+
 
                         server_socket.sendto("Failed Proof".encode(),addr)
                         server_socket.sendto("Try again:".encode(),addr)
+                        server_socket.sendto(" ".encode(),addr)
 
                         return
                     
                 server_socket.sendto("Target not in game".encode(),addr)
                 server_socket.sendto("Try again:".encode(),addr)
+                server_socket.sendto(" ".encode(),addr)
                 return
-        server_socket.sendto("Player not in a game".encode(),addr)
-        server_socket.sendto("Try again:".encode(),addr)
-        return
+    server_socket.sendto("Player not in a game".encode(),addr)
+    server_socket.sendto("Try again:".encode(),addr)
+    server_socket.sendto(" ".encode(),addr)
+    return
 
 def Wave(addr):
     for name,address in clients.items():
@@ -250,6 +310,132 @@ def Wave(addr):
                 g.last_player = addr
                 g.current_player = addr2
 
+def Victory(addr):
+    
+    for name,address in clients.items():
+        if address == addr:
+            username = name
+
+   
+    for g in games:
+        for player in g.players:
+            if player == username:
+
+
+                                
+                f = open(f"proof.json","wb")
+                data,addr = server_socket.recvfrom(1024)
+
+                try:
+                    while(data):
+                        f.write(data)
+                        server_socket.settimeout(2)
+                        data,addr = server_socket.recvfrom(1024)
+                except timeout:
+                    f.close()
+                    
+                    print("File Downloaded")
+
+                if addr != g.current_player:
+                    server_socket.sendto("Not your turn".encode(),addr)
+                    server_socket.sendto(" ".encode(),addr)
+                    return
+
+                if g.last_play[1] == "shoot":
+                    server_socket.sendto("Report your shot first".encode(),addr)
+                    server_socket.sendto("Try again".encode(),addr)
+                    return
+
+                verifier = os.system("zokrates verify")
+
+                if verifier == 0:
+
+                    json_file = open(f"proof.json")
+                    json_data = json.load(json_file)
+
+
+                    if json_data["inputs"] == g.hash[f"{username}"]:
+
+                        g.winner = [username,addr]
+                        for other in g.players:
+                            if other != username:
+                                for name,address in clients.items():
+                                    if name == other:
+                                        server_socket.sendto(f"Player {username} has claimed victory!".encode(),address)
+                                        g.last_play = [addr,"victory"]
+                                        
+
+                        
+                        return
+
+
+                server_socket.sendto("Failed Proof".encode(),addr)
+                server_socket.sendto("Try again:".encode(),addr)
+
+                return
+                    
+                
+    server_socket.sendto("Player not in a game".encode(),addr)
+    server_socket.sendto("Try again:".encode(),addr)
+    return
+                
+def Objection(addr):               
+    for name,address in clients.items():
+        if address == addr:
+            username = name
+
+   
+    for g in games:
+        for player in g.players:
+            if player == username:
+                                
+                f = open(f"proof.json","wb")
+                data,addr = server_socket.recvfrom(1024)
+
+                try:
+                    while(data):
+                        f.write(data)
+                        server_socket.settimeout(2)
+                        data,addr = server_socket.recvfrom(1024)
+                except timeout:
+                    f.close()
+                    
+                    print("File Downloaded")
+
+                verifier = os.system("zokrates verify")
+
+                if verifier == 0:
+
+                    json_file = open(f"proof.json")
+                    json_data = json.load(json_file)
+
+
+                    if json_data["inputs"] == g.hash[f"{username}"]:
+
+                        
+                        if g.last_play[1] == "victory":
+                            server_socket.sendto(f"Player {username} has objected!".encode(),g.last_play[0])
+                            server_socket.sendto("Objection Successful!".encode(),addr)
+                            server_socket.sendto("Your Turn!".encode(),addr)
+                            g.last_play = [addr,"objected"]
+                            g.last_player = g.current_player
+                            g.current_player = addr
+                        else:
+                            server_socket.sendto("Victory has not been claimed or already objected".encode(),addr)
+                                        
+                        
+                        return
+
+
+                server_socket.sendto("Failed Proof".encode(),addr)
+                server_socket.sendto("Try again:".encode(),addr)
+
+                return
+                    
+                
+    server_socket.sendto("Player not in a game".encode(),addr)
+    server_socket.sendto("Try again:".encode(),addr)
+    return
 
 
 
@@ -271,19 +457,20 @@ def start_server(host='127.0.0.1', port=65432):
         os.chdir(main_path)
 
 
+
         if aux[0].lower() == "hello":
             server_socket.sendto("Hello".encode(),addr)        
 
         if aux[0].lower() == "create":
             if len(aux) == 3:
-                os.chdir("zokrates_test")
+                os.chdir("proof1")
                 Create(aux[1],addr,aux[2])
             else:
                 server_socket.sendto("Comando Inválido!".encode(),addr)
 
         if aux[0].lower() == "join":
             if len(aux) == 3:
-                os.chdir("zokrates_test")
+                os.chdir("proof1")
                 Join(aux[1],addr,aux[2])
             else:
                 server_socket.sendto("Comando Inválido!".encode(),addr)
@@ -308,6 +495,19 @@ def start_server(host='127.0.0.1', port=65432):
             if len(aux) == 1:
                 Wave(addr)
             
+        if aux[0].lower() == "claim":
+            if len(aux) == 1:
+                os.chdir("proof3")
+                Victory(addr)
+        
+        if aux[0].lower() == "objection":
+            if len(aux) == 1:
+                os.chdir("proof3")
+                Objection(addr)
+
+        if aux[0].lower() == "start":
+            if len(aux) == 1:
+                Start(addr)
 
 if __name__ == '__main__':
     start_server()
